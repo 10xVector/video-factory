@@ -102,6 +102,30 @@ python3 scripts/video_factory.py \
   --output-dir ./marketing_output
 ```
 
+### 4. 📅 Daily Autopilot (For Claude Cowork, Antigravity `/schedule`, or Daily Cron)
+If you want **Claude Cowork** (or Antigravity's `/schedule` / `/automation`) to generate and publish **1 fresh video every day** without ever repeating a previous hook or outfit swap, use the `--daily` flag.
+
+`--daily` maintains a persistent ledger (`marketing_output/daily_history.json` + `marketing_output/SERIES_TRACKER.md`) and feeds all previously generated episodes into Gemini (`gemini-3.8-flash`) so Day 1 generates `ep01`, Day 2 generates a brand-new `ep02`, Day 3 generates `ep03`, etc.:
+
+**Copy-Paste Prompt for a Claude Cowork Daily Scheduled Task (or Antigravity `/schedule`):**
+```text
+Every day at 9:00 AM, use the video-factory skill to generate and publish today's new episode:
+1. Check ./marketing_output/daily_history.json so we never repeat a previous hook, persona, or garment swap.
+2. Run:
+   python3 ~/.claude/skills/video-factory/scripts/video_factory.py \
+     --repo /path/to/your/app \
+     --example-template ~/.claude/skills/video-factory/examples/glow_before_after.json \
+     --persona "12-axis fashion methodology — 1-piece outfit upgrades for everyday men and women" \
+     --daily \
+     --count 1 \
+     --generate-images \
+     --voice en_us_001 \
+     --publish \
+     --platforms youtube,instagram,facebook,tiktok \
+     --output-dir ./marketing_output
+3. Verify the milestone frames in visual_audit/ and append today's episode summary to ./marketing_output/SERIES_TRACKER.md.
+```
+
 ---
 
 ## 🚀 Quick Install (For Claude Code, Antigravity, Cursor, & Codex Users)

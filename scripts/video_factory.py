@@ -131,10 +131,13 @@ def plan_series_from_persona(
     api_key: Optional[str] = None,
     format_override: Optional[str] = None,
     example_template: Optional[Dict[str, Any]] = None,
+    previous_episodes: Optional[List[Dict[str, Any]]] = None,
+    start_episode_index: int = 1,
 ) -> List[Dict[str, Any]]:
     """
     Uses Gemini (`gemini-3.8-flash`) to brainstorm `count` distinct episodes (e.g. 1 or 10 videos)
     following an optional `example_template` structure and adhering to 5th-grade plain-English clarity.
+    When `previous_episodes` is provided (e.g. `--daily` mode), avoids repeating any past hooks or swaps.
     """
     resolved_key = resolve_gemini_api_key(api_key)
     if not resolved_key:
@@ -159,8 +162,21 @@ def plan_series_from_persona(
             f"{json.dumps(example_template, indent=2)}\n"
         )
 
+    history_block = ""
+    if previous_episodes:
+        past_summary = [
+            f"- {ep.get('name')}: {' / '.join(ep.get('hook_badge', []))} -> {' / '.join(ep.get('reveal_badge', []))}"
+            for ep in previous_episodes[-30:]
+        ]
+        history_block = (
+            f"\nPreviously Generated Episodes (DO NOT repeat these mistakes, garments, or hooks; "
+            f"start numbering at ep{start_episode_index:02d}_...):\n"
+            + "\n".join(past_summary)
+            + "\n"
+        )
+
     print(
-        f"🤖 Brainstorming {count} '{v_format}' episode(s) for {app_name} "
+        f"🤖 Brainstorming {count} '{v_format}' episode(s) (starting at #{start_episode_index}) for {app_name} "
         f"targeting: \"{persona}\" via {DEFAULT_TEXT_MODEL}..."
     )
 
@@ -169,7 +185,8 @@ App Description: {desc}
 Target Video Format: {v_format}
 Series Theme / Target Persona: "{persona}"
 Number of Distinct Episodes to Generate: {count}
-{example_block}
+Starting Episode Number: ep{start_episode_index:02d}
+{example_block}{history_block}
 Strict Creative Standards for EVERY Episode:
 1. Plain 5th-Grade English ("Caveman clarity"): Use short, punchy, everyday words. Zero corporate buzzwords.
 2. Total spoken word count across all 4 scenes MUST be under 60 words (15-20 seconds total).
@@ -184,7 +201,7 @@ Output ONLY a JSON object with key "episodes" containing a list of {count} episo
 {{
   "episodes": [
     {{
-      "name": "ep01_snake_case_name",
+      "name": "ep{start_episode_index:02d}_snake_case_name",
       "gender": "female or male or neutral",
       "swap_zone": "lower or upper",
       "before_score": "7.8",
@@ -317,6 +334,7 @@ def main():
     parser.add_argument("--example-template", type=str, help="Path to an example template JSON whose format/pacing Gemini should clone across --count videos")
     parser.add_argument("--persona", type=str, help="Target persona / series theme to auto-plan campaign(s) via Gemini")
     parser.add_argument("--count", type=int, default=1, help="Number of distinct videos to plan and render in batch (e.g., --count 10)")
+    parser.add_argument("--daily", action="store_true", help="Daily autopilot mode: reads daily_history.json in --output-dir, generates the next non-repeating episode (#N), and updates SERIES_TRACKER.md")
     parser.add_argument("--plan-only", action="store_true", help="Generate and print the episode series table + JSON templates without rendering MP4s")
     parser.add_argument("--generate-images", action="store_true", help="Auto-generate pixel-locked Before & After photos via Gemini Nano Banana 2.1 (generate_pair.py)")
     parser.add_argument("--swap-zone", choices=["lower", "upper", "center", "none"], help="Override swap zone for --generate-images")
@@ -455,6 +473,18 @@ def main():
                 brand_info.setdefault("tagline", example_tmpl_dict["brand"].get("tagline", ""))
                 brand_info.setdefault("theme", example_tmpl_dict["brand"])
 
+        os.makedirs(args.output_dir, exist_ok=True)
+        history_path = Path(args.output_dir) / "daily_history.json"
+        past_episodes: List[Dict[str, Any]] = []
+        if args.daily and history_path.exists():
+            try:
+                past_episodes = json.loads(history_path.read_text(encoding="utf-8"))
+                print(f"📅 Daily Autopilot: Loaded {len(past_episodes)} previously generated episode(s) from {history_path}")
+            except Exception:
+                past_episodes = []
+
+        start_ep_idx = len(past_episodes) + 1
+
         episodes = plan_series_from_persona(
             persona=args.persona,
             brand_info=brand_info,
@@ -462,14 +492,27 @@ def main():
             api_key=args.gemini_key,
             format_override=args.format,
             example_template=example_tmpl_dict,
+            previous_episodes=past_episodes if args.daily else None,
+            start_episode_index=start_ep_idx,
         )
+
+        if args.daily:
+            from datetime import datetime, timezone
+            today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            for ep in episodes:
+                ep["generated_date"] = today_str
+            past_episodes.extend(episodes)
+            history_path.write_text(json.dumps(past_episodes, indent=2), encoding="utf-8")
+            tracker_md = format_series_markdown_table(past_episodes)
+            tracker_path = Path(args.output_dir) / "SERIES_TRACKER.md"
+            tracker_path.write_text(f"# Daily Autopilot Series Tracker ({len(past_episodes)} Total Episodes)\n\n{tracker_md}\n", encoding="utf-8")
+            print(f"📅 Updated Daily Autopilot ledger ({history_path}) & tracker ({tracker_path})")
 
         series_table_md = format_series_markdown_table(episodes)
         print("\n📋 PLANNED EPISODE SERIES TABLE:\n")
         print(series_table_md)
         print()
 
-        os.makedirs(args.output_dir, exist_ok=True)
         table_path = Path(args.output_dir) / "episode_series_plan.md"
         table_path.write_text(f"# Planned Video Series ({len(episodes)} Episodes)\n\n{series_table_md}\n", encoding="utf-8")
         print(f"💾 Saved Markdown episode table to: {table_path}")
