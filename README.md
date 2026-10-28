@@ -47,6 +47,63 @@ Here is the real **12-Episode Batch Series Table** generated for **Glow** from a
 
 ---
 
+## 🤖 Full Automation Prompts (Copy-Paste for Claude Code / Antigravity / CLI)
+
+### 1. The Agent Prompt (Give this to Claude Code, Antigravity, Cursor, or Codex)
+Once you install the skill (`git clone https://github.com/10xVector/video-factory.git ~/.claude/skills/video-factory`), paste this single prompt into your coding agent to automate the entire 10-video pipeline:
+
+```text
+Use the video-factory skill to generate a 10-episode short-form video series for my app:
+1. Inspect my repo for brand colors, app name, and tagline.
+2. Follow the format and pacing of examples/glow_before_after.json.
+3. Plan a 10-episode series table around "<YOUR SERIES THEME / PERSONA>" where each episode highlights 1 specific mistake/problem and 1 instant upgrade/fix in plain 5th-grade English (<60 words per script).
+4. Generate pixel-locked Before & After image pairs for all 10 episodes using scripts/generate_pair.py (Gemini Nano Banana 2.1), render all 10 1080x1920 MP4s with voice en_us_001, and run the visual QA audit.
+```
+
+### 2. The Underlying System Prompt (How the Engine Plans 10 Episodes + Image Pairs)
+If you want to see or customize the exact LLM prompt that converts **1 example template + 1 theme** into **10 structured episode scripts + Before/After image prompts**, see **[`scripts/video_factory.py` (Lines 161–210)](scripts/video_factory.py#L161-L210)**:
+
+```text
+You are a world-class short-form video creative director for "{app_name}" ({tagline}).
+App Description: {desc}
+Target Video Format: {v_format}
+Series Theme / Target Persona: "{persona}"
+Number of Distinct Episodes to Generate: {count}
+
+Follow the exact pacing, badge style, and narrative rhythm of this reference template:
+{example_template_json}
+
+Strict Creative Standards for EVERY Episode:
+1. Plain 5th-Grade English ("Caveman clarity"): Use short, punchy, everyday words. Zero corporate buzzwords.
+2. Total spoken word count across all 4 scenes MUST be under 60 words (15-20 seconds total).
+3. 4-Scene Narrative:
+   - Scene 1 (Hook): Relatable visual mistake, dilemma, or base look score (1 short sentence).
+   - Scene 2 (Reveal): The 1-piece swap or instant app solution that fixes it (1-2 short sentences).
+   - Scene 3 (Breakdown Sheet): 2 concrete reasons why it works (1 short sentence).
+   - Scene 4 (Outro CTA): Low-friction call to action (1 short sentence).
+4. If generating Before/After transformations, specify `swap_zone` ("lower" for pants/skirt/shoes swaps, or "upper" for shirt/jacket/layer swaps) plus `before_image_prompt` and `after_edit_prompt` so Nano Banana 2.1 can generate a pixel-locked pair.
+```
+
+### 3. One-Command Fully Unattended CLI Automation (Plan → Images → Render → Publish)
+To run the entire factory headlessly (e.g., in a cron job or GitHub Action) from idea to published TikTok / Instagram Reel / YouTube Short:
+
+```bash
+export GEMINI_API_KEY="AIzaSy..."
+
+python3 scripts/video_factory.py \
+  --repo /path/to/your/app \
+  --example-template examples/glow_before_after.json \
+  --persona "12-axis fashion methodology — 1-piece outfit upgrades for everyday men and women" \
+  --count 10 \
+  --generate-images \
+  --voice en_us_001 \
+  --publish \
+  --platforms youtube,instagram,facebook,tiktok \
+  --output-dir ./marketing_output
+```
+
+---
+
 ## 🚀 Quick Install (For Claude Code, Antigravity, Cursor, & Codex Users)
 
 ### Option 1: One-Line Installer
