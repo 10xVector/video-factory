@@ -1,0 +1,105 @@
+{
+  "name": "moment_friday_night_irl",
+  "output_filename": "moment_friday_night_irl.mp4",
+  "format": "screen_walkthrough",
+  "voice": "en_us_001",
+  "fps": 30,
+  "gender": "neutral",
+  "screenshots": [
+    "web/public/marketing/screen-discover.png",
+    "web/public/marketing/screen-moment-details.png",
+    "web/public/marketing/screen-chat.png"
+  ],
+  "step1_title": "Step 1 · Swipe Local Moments",
+  "step2_title": "Step 2 · Host Approves Group",
+  "step3_title": "Step 3 · Group Chat & Meet",
+  "step1_badge": [
+    "Swipe real plans happening",
+    "tonight in your city"
+  ],
+  "step2_badge": [
+    "Small groups of 4 to 8.",
+    "No awkward big crowds."
+  ],
+  "step3_badge": [
+    "Unlock the group chat",
+    "and show up together"
+  ],
+  "brand": {
+    "app_name": "Moment",
+    "tagline": "Make yours",
+    "header_badge_text": "Live Nearby",
+    "primary_accent_rgb": [255, 78, 80],
+    "surface_bg_rgb": [18, 18, 22],
+    "status_bar_time": "9:41",
+    "tracker_pills": [
+      "1 · Discover",
+      "2 · Match",
+      "3 · Go Live"
+    ],
+    "sheet_badge_label": "why moment works",
+    "sheet_pill_text": "Discover → Match → Meet IRL",
+    "sheet_highlight_pill": "4–8 People",
+    "enforce_single_piece_lock": false
+  },
+  "hook": {
+    "badge_lines": [
+      "POV: It's Friday night and",
+      "group chat plans fell through"
+    ],
+    "voiceover_text": "POV: It is Friday night, and your group chat plans just fell through again.",
+    "right_pill": "Tonight",
+    "banner_text": "Real plans · Zero endless texting"
+  },
+  "reveal": {
+    "badge_lines": [
+      "Swipe real plans nearby.",
+      "Join a table in 1 tap."
+    ],
+    "voiceover_text": "Instead of scrolling at home, open Moment to see real tables, coffee runs, and hangouts happening near you tonight."
+  },
+  "breakdown": {
+    "badge_lines": [
+      "Curated small groups",
+      "Built-in group chat"
+    ],
+    "voiceover_text": "Every table is capped at four to eight people, and the group chat opens before you go.",
+    "sheet_title": "why moment works",
+    "subtitle_text": "Curated small-group hangouts · Zero awkward networking",
+    "metrics": [
+      { "label": "STEP 1", "value": "Swipe" },
+      { "label": "STEP 2", "value": "Match" },
+      { "label": "GROUP", "value": "4–8 Max" },
+      { "label": "VIBE", "value": "100% IRL" }
+    ],
+    "feature_pills": [
+      { "name": "Curated Hosts", "tag": "Verified" },
+      { "name": "Small Tables", "tag": "4–8 People" },
+      { "name": "Vibe Check", "tag": "Host Approved" },
+      { "name": "Group Chat", "tag": "Instant" }
+    ],
+    "bullets": [
+      {
+        "title": "Small Group Tables",
+        "description": "Four to eight people so everyone actually talks.",
+        "badge_text": "4–8 Spots"
+      },
+      {
+        "title": "Chat Before You Meet",
+        "description": "Break the ice in the group chat before showing up.",
+        "badge_text": "Live Chat"
+      }
+    ],
+    "button_text": "Join Your First Moment Free"
+  },
+  "outro": {
+    "app_title": "Moment — Make yours",
+    "subtitle": "Real-world hangouts happening near you tonight",
+    "cta_button_text": "Download Free on iOS",
+    "bottom_pill_lines": [
+      "Free on the App Store",
+      "Link in bio"
+    ],
+    "voiceover_text": "Stop waiting on the group chat. Find your next hangout free on Moment."
+  }
+}

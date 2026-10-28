@@ -1,0 +1,73 @@
+{
+  "name": "glow_5ft6_proportion_rule",
+  "output_filename": "glow_5ft6_proportion_rule.mp4",
+  "format": "before_after_slider",
+  "voice": "en_us_001",
+  "fps": 30,
+  "gender": "male",
+  "before_image": "/Users/10xpath/code/glow/marketing/assets/man_5ft6_before.jpg",
+  "after_image": "/Users/10xpath/code/glow/marketing/assets/man_5ft6_after.jpg",
+  "step1_title": "Step 1 · Fit & Cut (+1.4)",
+  "step2_title": "Step 2 · Layer & Color (+1.2)",
+  "step3_title": "Step 3 · Final Glow (+1.1 → 9.5)",
+  "brand": {
+    "app_name": "Glow",
+    "tagline": "Style",
+    "header_badge_text": "12 Axes",
+    "primary_accent_rgb": [244, 63, 94],
+    "surface_bg_rgb": [12, 12, 16],
+    "status_bar_time": "9:41",
+    "tracker_pills": [
+      "Base Look · 7.8",
+      "1-Piece Swap",
+      "3+ Axes · 9.5"
+    ],
+    "sheet_badge_label": "glow rating",
+    "sheet_pill_text": "Base 7.8 → 1-Piece Swap → Glow 9.5",
+    "sheet_highlight_pill": "+1.7 Glow",
+    "enforce_single_piece_lock": true
+  },
+  "hook": {
+    "badge_lines": [
+      "POV: You're 5'6 and your shirts",
+      "make your legs look tiny"
+    ],
+    "voiceover_text": "POV: You're five foot six, and your long shirts make your legs look tiny."
+  },
+  "reveal": {
+    "badge_lines": [
+      "Shorter jacket.",
+      "Legs look 3 inches longer."
+    ],
+    "voiceover_text": "Your shirt is just too long. When your jacket stops at your belt, your legs instantly look three inches longer."
+  },
+  "breakdown": {
+    "badge_lines": [
+      "Shorter jacket, longer legs",
+      "Pants with no bunching"
+    ],
+    "voiceover_text": "A short jacket gives you longer legs, and pants with no bunching make you look taller.",
+    "sheet_title": "why this works on you",
+    "bullets": [
+      {
+        "title": "Shorter Jacket",
+        "description": "Stops at your belt so your legs look longer."
+      },
+      {
+        "title": "Pants That Fit",
+        "description": "No extra fabric bunching up on your shoes."
+      }
+    ],
+    "button_text": "Save Before & After Video"
+  },
+  "outro": {
+    "app_title": "Glow — Style",
+    "subtitle": "Clothes that fit your real height",
+    "cta_button_text": "Try Your First Photo Free",
+    "bottom_pill_lines": [
+      "Free on the App Store",
+      "Link in bio"
+    ],
+    "voiceover_text": "Stop wearing clothes that swallow you. Try your first photo free on Glow."
+  }
+}
