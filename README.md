@@ -14,13 +14,13 @@ Point your AI coding agent at **any app repository**, and `video-factory` will:
 
 ---
 
-## 🎥 Example Output (`examples/moment_friday_night_irl.mp4`)
+## 🎥 Example Output (`examples/glow_before_after_example.mp4`)
 
-Included in [`examples/moment_friday_night_irl.mp4`](examples/moment_friday_night_irl.mp4) (rendered from [`examples/moment_friday_hangout.json`](examples/moment_friday_hangout.json)) is a full 21-second 1080×1920 vertical campaign generated for **Moment** (`#FF4E50` brand accent, OG TikTok Jessie voice `en_us_001`, 3 real iOS screenshots):
+Included in [`examples/glow_before_after_example.mp4`](examples/glow_before_after_example.mp4) (rendered from [`examples/glow_before_after.json`](examples/glow_before_after.json)) is a full 19-second 1080×1920 vertical campaign generated for **Glow** (`#F43F5E` rose accent, OG TikTok Jessie voice `en_us_001`, interactive `< >` Before/After slider wipe, and 12-axis coaching breakdown sheet):
 
-| Scene 1: The Hook (`0–5s`) | Scene 2: Screen Wipe (`5–11s`) | Scene 3: Breakdown Sheet (`11–16s`) | Scene 4: Outro & CTA (`16–21s`) |
+| Scene 1: The Hook (`0–5s`) | Scene 2: Slider Wipe (`5–12s`) | Scene 3: Coaching Sheet (`12–16s`) | Scene 4: Outro & CTA (`16–19s`) |
 | :---: | :---: | :---: | :---: |
-| <img src="examples/preview_s1_hook.jpg" width="200" alt="Scene 1 Hook" /> | <img src="examples/preview_s2_transition.jpg" width="200" alt="Scene 2 Wipe" /> | <img src="examples/preview_s3_breakdown.jpg" width="200" alt="Scene 3 Breakdown" /> | <img src="examples/preview_s4_outro.jpg" width="200" alt="Scene 4 Outro" /> |
+| <img src="examples/preview_s1_hook.jpg" width="200" alt="Scene 1 Hook" /> | <img src="examples/preview_s2_transition.jpg" width="200" alt="Scene 2 Slider Wipe" /> | <img src="examples/preview_s3_breakdown.jpg" width="200" alt="Scene 3 Coaching Sheet" /> | <img src="examples/preview_s4_outro.jpg" width="200" alt="Scene 4 Outro" /> |
 
 ---
 
