@@ -4,5 +4,6 @@ __pycache__/
 .DS_Store
 marketing_output/
 *.mp4
+!examples/*.mp4
 .env
 .env.local
