@@ -100,15 +100,26 @@ python3 .agents/skills/video-factory/scripts/video_factory.py \
   --output-dir ./marketing_output
 ```
 
-#### Option B: Auto-Brainstorm from a Persona via Gemini (`--persona`)
-If the user provided a `GEMINI_API_KEY` and wants Gemini to plan the script from a persona string:
+#### Option B: Auto-Brainstorm 1 or 10+ Videos from a Persona / Example Format via Gemini (`--persona` + `--count 10`)
+If the user provided a `GEMINI_API_KEY` and wants Gemini (`gemini-3.8-flash`) to plan a single video or a **10-video batch series** following an example template format (and optionally generate pixel-locked Before/After photos via `gemini-nano-banana-2.1` + `scripts/generate_pair.py`):
 ```bash
+# Generate a 10-episode series following an example video format:
 python3 .agents/skills/video-factory/scripts/video_factory.py \
   --repo /path/to/repo \
-  --persona "25yo remote worker new to the city who wants real small-group hangouts" \
+  --example-template .agents/skills/video-factory/examples/glow_before_after.json \
+  --persona "12-axis fashion methodology — 1-piece outfit upgrades for everyday men and women" \
+  --count 10 \
+  --generate-images \
   --voice en_us_001 \
-  --save-template ./marketing_output/generated_campaign.json \
   --output-dir ./marketing_output
+
+# Or generate a single pixel-locked Before/After photo pair directly:
+python3 .agents/skills/video-factory/scripts/generate_pair.py \
+  --before-prompt "Full-body 2:3 street style photo of a 30yo man wearing an olive jacket and wrinkled beige chinos." \
+  --after-edit-prompt "Swap ONLY the wrinkled beige chinos for dark brown pleated wool trousers and loafers." \
+  --swap-zone lower \
+  --output-before ./marketing_output/assets/before.jpg \
+  --output-after ./marketing_output/assets/after.jpg
 ```
 
 ---

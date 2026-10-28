@@ -24,6 +24,29 @@ Included in [`examples/glow_before_after_example.mp4`](examples/glow_before_afte
 
 ---
 
+## 📊 Batch Series Generation: Prompt 1 Format → Spit Out 10+ Videos (`--count 10`)
+
+You can point `video-factory` at an **example template** (`--example-template examples/glow_before_after.json`) and ask it to plan and render **10+ distinct videos in one batch** (`--count 10`), complete with pixel-locked Before/After photos generated via Gemini Nano Banana 2.1 (`--generate-images`).
+
+Here is the real **12-Episode Batch Series Table** generated for **Glow** from a single methodology prompt:
+
+| # | Episode ID | Scene 1 Hook (The 1 Mistake / Base Look) | Scene 2 Reveal (The 1-Piece Upgrade) | Score | Scene 3 Breakdown (Why It Works) |
+| :-: | :--- | :--- | :--- | :-: | :--- |
+| **1** | `ep01_fit_thigh_room` | **1 Mistake: Faded bunched jeans** — Drags down her whole lower half | **1 Swap: High-waist wide black jeans** — Room through the thighs | `7.8` → **9.5** | **Fit & Drape:** Wide-Leg Cut • **Balance:** Solid Black Base |
+| **2** | `ep02_silhouette_column_balance` | **Base Look 7.8: Plain cream tee** — Missing outer structure on a broad frame | **1 Piece Added: Open olive overshirt** — Sharpens shoulder line | `7.8` → **9.4** | **Structure:** Workwear Collar & Seams • **Layering:** Open Front Frame |
+| **3** | `ep03_proportion_cropped_jacket` | **1 Mistake: Wrinkled beige pants** — Bunches at the ankle + shortens legs | **1 Swap: Dark brown pleated trousers** — Zero knee or ankle wrinkles | `7.8` → **9.4** | **Drape & Fit:** Pleated Wool-Blend • **Cohesion:** Espresso Trousers + Loafers |
+| **4** | `ep04_contrast_collar_frame` | **1 Mistake: Dark navy top on navy pants** — Zero waist break + flat around face | **1 Swap: Tucked crisp white crew tee** — Brightens his jawline | `7.7` → **9.3** | **Contrast:** High-Light Crew Collar • **Ratio:** 1/3 Tucked Top to 2/3 Legs |
+| **5** | `ep05_drape_skirt_vs_pants` | **1 Mistake: Tight blue skinny jeans** — Pulls at the thighs + bunches at knees | **1 Swap: Flowing espresso maxi skirt** — Zero thigh pulling in motion | `7.8` → **9.5** | **Fit & Drape:** Fluid A-Line Skirt • **Cohesion:** Espresso Skirt + Tan Loafers |
+| **6** | `ep06_structure_suede_vs_cardigan` | **Base Look 7.9: Cream top + black skirt** — Needs shoulder shape + 1/3 outer crop | **1 Piece Added: Cropped dark suede jacket** — Crisp shoulder line | `7.9` → **9.5** | **Structure & Ratio:** Waist-Cropped Suede • **Contrast:** Dark Suede vs Cream Knit |
+| **7** | `ep07_balance_shoes_and_hem` | **1 Mistake: Tight tapered blue jeans** — Pinches the calves + breaks leg line | **1 Swap: High-waist cream wide trousers** — Fluid motion with every step | `7.8` → **9.4** | **Drape:** Wide-Leg Tailored Cut • **Balance:** Low-Profile Gum Trainers |
+| **8** | `ep08_pattern_matte_textures` | **1 Mistake: Flat untucked oatmeal tee** — Covers the waist + lacks fabric texture | **1 Swap: Tucked waffle-knit crew tee** — Tactile 3D waffle weave | `7.8` → **9.4** | **Texture:** Heavyweight Waffle Knit • **Ratio:** Exposed Pleated Waistline |
+| **9** | `ep09_layering_two_piece_depth` | **Base Look 7.8: White tee + dark jeans** — Clean base, but flat 1-layer upper body | **1 Piece Added: Open olive overshirt** — Instant 2-piece depth | `7.8` → **9.4** | **Layering:** Unbuttoned Workwear Overshirt • **Contrast:** White Center Strip |
+| **10** | `ep10_details_waist_tuck` | **Base Look 7.9: Cream knit + navy trousers** — Needs outer structure + warm accent | **1 Addition: Cropped olive wool jacket** — Crisp shoulder & hem line | `7.9` → **9.5** | **Structure & Ratio:** Cropped Wool Jacket • **Details:** Cognac Shoulder Bag |
+| **11** | `ep11_cohesion_warm_tones` | **1 Mistake: Icy washed blue jeans** — Cool denim clashes with warm oatmeal top | **1 Swap: Wide dark espresso trousers** — 100% warm autumn palette | `7.8` → **9.5** | **Cohesion:** Warm Oatmeal + Espresso • **Drape:** Wide Tailored Leg |
+| **12** | `ep12_focal_point_burgundy_bag` | **Base Look 8.0: Cream knit + black midi skirt** — Missing outer edge + color pop | **1 Addition: Cropped matte leather jacket** — Sharpens shoulders & waist | `8.0` → **9.6** | **Focal Point:** Deep Burgundy Shoulder Bag • **Structure:** Matte Leather |
+
+---
+
 ## 🚀 Quick Install (For Claude Code, Antigravity, Cursor, & Codex Users)
 
 ### Option 1: One-Line Installer
@@ -113,17 +136,38 @@ python3 scripts/video_factory.py \
   --output-dir ./marketing_output
 ```
 
-### 4. Auto-Plan & Render from a Persona via Gemini
+### 4. Auto-Plan & Render 1 or 10+ Videos from a Persona / Example Format via Gemini
 ```bash
+# Spit out a 10-video series following an example format (plus auto-generate Before/After photos):
 python3 scripts/video_factory.py \
   --repo /path/to/your/app \
-  --persona "25yo remote worker new to NYC who wants curated small-group hangouts" \
-  --voice en_us_001 \
-  --save-template ./marketing_output/campaign_plan.json \
+  --example-template examples/glow_before_after.json \
+  --persona "12-axis fashion methodology — 1-piece outfit upgrades for everyday men and women" \
+  --count 10 \
+  --generate-images \
+  --output-dir ./marketing_output
+
+# Or preview the 10-episode Markdown table & JSON plans first without rendering:
+python3 scripts/video_factory.py \
+  --example-template examples/glow_before_after.json \
+  --persona "12-axis fashion methodology — 1-piece outfit upgrades" \
+  --count 10 \
+  --plan-only \
   --output-dir ./marketing_output
 ```
 
-### 5. Publish (or Dry-Run) to YouTube Shorts, Instagram Reels, Facebook Reels, & TikTok
+### 5. Standalone Before/After Image Pair Generator (`scripts/generate_pair.py`)
+Generate certified **0.0-pixel-drift** Before & After photo pairs using **Gemini Nano Banana 2.1** (`gemini-nano-banana-2.1`) with automatic **Single-Piece Pixel-Lock Compositing**:
+```bash
+python3 scripts/generate_pair.py \
+  --before-prompt "Full-body 2:3 street style photo of a 30yo man on a Soho sidewalk wearing a fitted olive field jacket over a white tee, paired with wrinkled baggy beige chinos. Natural daylight." \
+  --after-edit-prompt "Swap ONLY the wrinkled beige chinos for dark brown pleated wool trousers and espresso loafers." \
+  --swap-zone lower \
+  --output-before ./marketing_output/assets/before.jpg \
+  --output-after ./marketing_output/assets/after.jpg
+```
+
+### 6. Publish (or Dry-Run) to YouTube Shorts, Instagram Reels, Facebook Reels, & TikTok
 ```bash
 # Dry-run simulation across all 4 platforms:
 python3 scripts/distribute.py \

@@ -6,18 +6,25 @@ Autonomous end-to-end short-form video generation pipeline for TikTok, Instagram
 Works with ANY app repository (React Native, Expo, Next.js, iOS, Web) by inspecting the repo's
 look & feel (colors, app name, screenshots, value proposition) or reading a custom BrandConfig.
 
+Supports 3 built-in video formats + batch series generation (`--count 10`):
+  1. `before_after_slider`  : Full-screen Before -> After wipe slider + 2-point breakdown + CTA
+  2. `side_by_side_proof`   : Split-screen comparison + visual callout + takeaway punchline
+  3. `screen_walkthrough`   : 3-step app screen tour + feature sheet + CTA
+
 Usage Examples:
   # 1. Inspect a repository and auto-generate its BrandConfig:
-  python3 video_factory.py --inspect-repo /path/to/app --save-brand brand.json
+  python3 scripts/video_factory.py --inspect-repo /path/to/app --save-brand brand.json
 
   # 2. Render from a campaign template JSON:
-  python3 video_factory.py --template examples/moment_friday_hangout.json
+  python3 scripts/video_factory.py --template examples/glow_before_after.json
 
-  # 3. Brainstorm & render a new campaign from a target persona + app repo via Gemini:
-  python3 video_factory.py \
+  # 3. Brainstorm & render a 10-video series following an example format via Gemini:
+  python3 scripts/video_factory.py \
       --repo /path/to/app \
-      --persona "25yo remote worker new to NYC who hates awkward networking events" \
-      --gemini-key "$GEMINI_API_KEY"
+      --example-template examples/glow_before_after.json \
+      --persona "12-axis style methodology — 1-piece outfit upgrades for everyday men and women" \
+      --count 10 \
+      --generate-images
 """
 
 import os
@@ -52,73 +59,36 @@ from factory.script_manager import ScriptReviewManager
 from distribution.auth import resolve_gemini_api_key, init_social_config, print_auth_status
 
 
-def plan_campaign_from_persona(
-    persona: str,
-    brand_info: Dict[str, Any],
-    api_key: Optional[str] = None,
-    format_override: Optional[str] = None,
-) -> Dict[str, Any]:
+DEFAULT_TEXT_MODEL = "gemini-3.8-flash"
+API_REVISION = "2026-05-20"
+
+
+def _call_gemini_json(prompt: str, api_key: str, model: str = DEFAULT_TEXT_MODEL) -> Any:
     """
-    Uses Gemini to brainstorm a high-retention short-form video campaign tailored to ANY app
-    and target persona, adhering strictly to the 5th-grade plain-English clarity standard.
+    Calls Gemini (`gemini-3.8-flash`) via the official `google-genai` Interactions API
+    when installed, with a direct REST fallback. Parses and returns JSON output.
     """
-    resolved_key = resolve_gemini_api_key(api_key)
-    if not resolved_key:
-        raise ValueError(
-            "GEMINI_API_KEY is required to brainstorm campaigns from a persona. "
-            "Pass `--gemini-key YOUR_KEY`, set `GEMINI_API_KEY` in `.env`, or run `--init-credentials`."
-        )
+    try:
+        from google import genai  # type: ignore
 
-    app_name = brand_info.get("app_name", "Our App")
-    tagline = brand_info.get("tagline", "")
-    desc = brand_info.get("description", "")
-    v_format = format_override or brand_info.get("default_format", "screen_walkthrough")
+        client = genai.Client(api_key=api_key)
+        if hasattr(client, "interactions"):
+            interaction = client.interactions.create(
+                model=model,
+                input=prompt,
+                response_format={"type": "json"},
+            )
+            raw = getattr(interaction, "output_text", None) or ""
+            if raw:
+                return json.loads(raw)
+    except Exception:
+        pass
 
-    print(f"🤖 Brainstorming viral '{v_format}' campaign for {app_name} targeting persona: \"{persona}\" via Gemini...")
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={resolved_key}"
-
-    prompt = f"""You are a world-class short-form video creative director for "{app_name}" ({tagline}).
-App Description: {desc}
-Target Video Format: {v_format}
-Target Persona / Angle: "{persona}"
-
-Strict Creative Standards:
-1. Plain 5th-Grade English ("Caveman clarity"): Use short, punchy, everyday words. Zero corporate buzzwords.
-2. Total spoken word count across all 4 scenes MUST be under 60 words (15-22 seconds total).
-3. 4-Scene Narrative:
-   - Scene 1 (Hook): Relatable POV dilemma or visual hook for this persona (1 short sentence).
-   - Scene 2 (Reveal / Step 1->2): How {app_name} solves it immediately on screen (1-2 short sentences).
-   - Scene 3 (Breakdown Sheet): 2 concrete reasons why it works in real life (1-2 short sentences).
-   - Scene 4 (Outro CTA): Low-friction call to action (1 short sentence).
-
-Output ONLY a raw JSON object matching this exact schema:
-{{
-  "name": "snake_case_campaign_name",
-  "gender": "neutral",
-  "hook_badge": ["Line 1 (max 28 chars)", "Line 2 (max 28 chars)"],
-  "hook_vo": "Spoken hook sentence.",
-  "step1_title": "Step 1 · Short Label",
-  "step2_title": "Step 2 · Short Label",
-  "step3_title": "Step 3 · Short Label",
-  "reveal_badge": ["Line 1 (max 28 chars)", "Line 2 (max 28 chars)"],
-  "reveal_vo": "Spoken reveal explanation.",
-  "breakdown_badge": ["Line 1 (max 28 chars)", "Line 2 (max 28 chars)"],
-  "breakdown_vo": "Spoken breakdown summary.",
-  "sheet_title": "why {app_name.lower()} works",
-  "bullet1_title": "2-3 Word Feature Title",
-  "bullet1_desc": "Short 6-8 word plain English explanation.",
-  "bullet2_title": "2-3 Word Feature Title",
-  "bullet2_desc": "Short 6-8 word plain English explanation.",
-  "button_text": "Try {app_name} Free",
-  "outro_vo": "Spoken outro call to action."
-}}
-"""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     payload = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"responseMimeType": "application/json"},
     })
-
     cmd = [
         "curl", "-s", "-L", "-X", "POST",
         url,
@@ -130,9 +100,140 @@ Output ONLY a raw JSON object matching this exact schema:
     if "candidates" not in resp_data:
         raise RuntimeError(f"Gemini API error: {resp_data}")
     raw_text = resp_data["candidates"][0]["content"]["parts"][0]["text"]
-    plan = json.loads(raw_text)
-    print(f"✨ Campaign Strategy Generated: {plan['name']}")
-    return plan
+    return json.loads(raw_text)
+
+
+def plan_campaign_from_persona(
+    persona: str,
+    brand_info: Dict[str, Any],
+    api_key: Optional[str] = None,
+    format_override: Optional[str] = None,
+    example_template: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Uses Gemini (`gemini-3.8-flash`) to brainstorm a single high-retention short-form video campaign.
+    """
+    episodes = plan_series_from_persona(
+        persona=persona,
+        brand_info=brand_info,
+        count=1,
+        api_key=api_key,
+        format_override=format_override,
+        example_template=example_template,
+    )
+    return episodes[0]
+
+
+def plan_series_from_persona(
+    persona: str,
+    brand_info: Dict[str, Any],
+    count: int = 1,
+    api_key: Optional[str] = None,
+    format_override: Optional[str] = None,
+    example_template: Optional[Dict[str, Any]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Uses Gemini (`gemini-3.8-flash`) to brainstorm `count` distinct episodes (e.g. 1 or 10 videos)
+    following an optional `example_template` structure and adhering to 5th-grade plain-English clarity.
+    """
+    resolved_key = resolve_gemini_api_key(api_key)
+    if not resolved_key:
+        raise ValueError(
+            "GEMINI_API_KEY is required to brainstorm campaigns from a persona. "
+            "Pass `--gemini-key YOUR_KEY`, set `GEMINI_API_KEY` in `.env`, or run `--init-credentials`."
+        )
+
+    app_name = brand_info.get("app_name", "Our App")
+    tagline = brand_info.get("tagline", "")
+    desc = brand_info.get("description", "")
+    v_format = (
+        format_override
+        or (example_template.get("format") if example_template else None)
+        or brand_info.get("default_format", "screen_walkthrough")
+    )
+
+    example_block = ""
+    if example_template:
+        example_block = (
+            "\nFollow the exact pacing, badge style, and narrative rhythm of this reference template:\n"
+            f"{json.dumps(example_template, indent=2)}\n"
+        )
+
+    print(
+        f"🤖 Brainstorming {count} '{v_format}' episode(s) for {app_name} "
+        f"targeting: \"{persona}\" via {DEFAULT_TEXT_MODEL}..."
+    )
+
+    prompt = f"""You are a world-class short-form video creative director for "{app_name}" ({tagline}).
+App Description: {desc}
+Target Video Format: {v_format}
+Series Theme / Target Persona: "{persona}"
+Number of Distinct Episodes to Generate: {count}
+{example_block}
+Strict Creative Standards for EVERY Episode:
+1. Plain 5th-Grade English ("Caveman clarity"): Use short, punchy, everyday words. Zero corporate buzzwords.
+2. Total spoken word count across all 4 scenes MUST be under 60 words (15-20 seconds total).
+3. 4-Scene Narrative:
+   - Scene 1 (Hook): Relatable visual mistake, dilemma, or base look score (1 short sentence).
+   - Scene 2 (Reveal): The 1-piece swap or instant app solution that fixes it (1-2 short sentences).
+   - Scene 3 (Breakdown Sheet): 2 concrete reasons why it works (1 short sentence).
+   - Scene 4 (Outro CTA): Low-friction call to action (1 short sentence).
+4. If generating Before/After transformations, specify `swap_zone` ("lower" for pants/skirt/shoes swaps, or "upper" for shirt/jacket/layer swaps) plus `before_image_prompt` and `after_edit_prompt` so Nano Banana 2.1 can generate a pixel-locked pair.
+
+Output ONLY a JSON object with key "episodes" containing a list of {count} episode objects matching this exact schema:
+{{
+  "episodes": [
+    {{
+      "name": "ep01_snake_case_name",
+      "gender": "female or male or neutral",
+      "swap_zone": "lower or upper",
+      "before_score": "7.8",
+      "after_score": "9.4",
+      "hook_badge": ["Line 1 (max 28 chars)", "Line 2 (max 28 chars)"],
+      "hook_vo": "Spoken hook sentence.",
+      "step1_title": "1 Swap · Short Label",
+      "step2_title": "Dim 2 · Short Label",
+      "step3_title": "Dim 3 · Short Label",
+      "reveal_badge": ["Line 1 (max 28 chars)", "Line 2 (max 28 chars)"],
+      "reveal_vo": "Spoken reveal explanation.",
+      "breakdown_badge": ["Line 1 (max 28 chars)"],
+      "breakdown_vo": "Spoken breakdown summary.",
+      "sheet_title": "why {app_name.lower()} works",
+      "bullet1_title": "2-4 Word Feature Title",
+      "bullet1_desc": "Short 6-9 word plain English explanation.",
+      "bullet2_title": "2-4 Word Feature Title",
+      "bullet2_desc": "Short 6-9 word plain English explanation.",
+      "button_text": "Save Before & After Video",
+      "outro_vo": "Spoken outro call to action.",
+      "before_image_prompt": "Full-body 2:3 vertical street style portrait prompt for the Before look.",
+      "after_edit_prompt": "Instruction to swap ONLY the target garment zone while keeping face, pose, and background identical."
+    }}
+  ]
+}}
+"""
+    data = _call_gemini_json(prompt, api_key=resolved_key, model=DEFAULT_TEXT_MODEL)
+    episodes = data.get("episodes", [data] if isinstance(data, dict) and "name" in data else [])
+    if not episodes:
+        raise RuntimeError(f"Gemini did not return valid episodes: {data}")
+    print(f"✨ Generated {len(episodes)} episode plan(s)!")
+    return episodes
+
+
+def format_series_markdown_table(episodes: List[Dict[str, Any]]) -> str:
+    """Formats a batch of planned episodes as a clean Markdown table."""
+    lines = [
+        "| # | Episode | Hook (Before) | 1-Piece Upgrade (After) | Score | Why It Works (Breakdown) |",
+        "|---|---|---|---|---|---|",
+    ]
+    for idx, ep in enumerate(episodes, 1):
+        name = ep.get("name", f"ep{idx:02d}")
+        hook = " — ".join(ep.get("hook_badge", []))
+        reveal = " — ".join(ep.get("reveal_badge", []))
+        b_score = ep.get("before_score", "7.8")
+        a_score = ep.get("after_score", "9.4")
+        why = f"**{ep.get('bullet1_title', '')}** + **{ep.get('bullet2_title', '')}**"
+        lines.append(f"| {idx} | `{name}` | {hook} | {reveal} | {b_score} → **{a_score}** | {why} |")
+    return "\n".join(lines)
 
 
 def run_pipeline(
@@ -212,8 +313,13 @@ def main():
     parser.add_argument("--inspect-repo", type=str, help="Inspect the specified repo path, print discovered BrandConfig, and exit")
     parser.add_argument("--brand-config", type=str, help="Path to a saved BrandConfig JSON file")
     parser.add_argument("--save-brand", type=str, help="Save discovered BrandConfig JSON to this path")
-    parser.add_argument("--template", type=str, help="Path to a campaign template JSON file")
-    parser.add_argument("--persona", type=str, help="Target persona / angle to auto-plan campaign via Gemini")
+    parser.add_argument("--template", type=str, help="Path to a campaign template JSON file to render directly")
+    parser.add_argument("--example-template", type=str, help="Path to an example template JSON whose format/pacing Gemini should clone across --count videos")
+    parser.add_argument("--persona", type=str, help="Target persona / series theme to auto-plan campaign(s) via Gemini")
+    parser.add_argument("--count", type=int, default=1, help="Number of distinct videos to plan and render in batch (e.g., --count 10)")
+    parser.add_argument("--plan-only", action="store_true", help="Generate and print the episode series table + JSON templates without rendering MP4s")
+    parser.add_argument("--generate-images", action="store_true", help="Auto-generate pixel-locked Before & After photos via Gemini Nano Banana 2.1 (generate_pair.py)")
+    parser.add_argument("--swap-zone", choices=["lower", "upper", "center", "none"], help="Override swap zone for --generate-images")
     parser.add_argument("--gemini-key", type=str, help="Gemini API key (or set GEMINI_API_KEY env var)")
     parser.add_argument("--init-credentials", action="store_true", help="Initialize ~/.config/video-factory/credentials.json")
     parser.add_argument("--check-auth", action="store_true", help="Check configured Gemini and social publishing credentials")
@@ -278,14 +384,13 @@ def main():
         with open(args.template, "r", encoding="utf-8") as f:
             raw_tmpl = json.load(f)
 
-        # Resolve relative screenshot/image paths relative to template parent or repo
         tmpl_dir = Path(args.template).resolve().parent
         repo_base = Path(args.repo).resolve() if args.repo else Path.cwd()
 
         def _resolve_asset(p_str: str) -> str:
             if not p_str or os.path.isabs(p_str) and os.path.exists(p_str):
                 return p_str
-            for base in [Path.cwd(), repo_base, tmpl_dir, tmpl_dir.parent.parent]:
+            for base in [Path.cwd(), repo_base, tmpl_dir, tmpl_dir.parent, tmpl_dir.parent.parent]:
                 cand = (base / p_str).resolve()
                 if cand.exists():
                     return str(cand)
@@ -337,24 +442,50 @@ def main():
             )
         return
 
-    # Mode 2: Brainstorm & Render from Persona + Repo/BrandConfig via Gemini
+    # Mode 2: Brainstorm & Render 1 or N Episodes from Persona (+ optional Example Template) via Gemini
     if args.persona:
         if not brand_info:
             brand_info = inspect_repository(".")
-        plan = plan_campaign_from_persona(
+
+        example_tmpl_dict: Optional[Dict[str, Any]] = None
+        if args.example_template and os.path.exists(args.example_template):
+            example_tmpl_dict = json.loads(Path(args.example_template).read_text(encoding="utf-8"))
+            if not args.app_name and "brand" in example_tmpl_dict:
+                brand_info.setdefault("app_name", example_tmpl_dict["brand"].get("app_name", "App"))
+                brand_info.setdefault("tagline", example_tmpl_dict["brand"].get("tagline", ""))
+                brand_info.setdefault("theme", example_tmpl_dict["brand"])
+
+        episodes = plan_series_from_persona(
             persona=args.persona,
             brand_info=brand_info,
+            count=max(1, args.count),
             api_key=args.gemini_key,
             format_override=args.format,
+            example_template=example_tmpl_dict,
         )
+
+        series_table_md = format_series_markdown_table(episodes)
+        print("\n📋 PLANNED EPISODE SERIES TABLE:\n")
+        print(series_table_md)
+        print()
+
+        os.makedirs(args.output_dir, exist_ok=True)
+        table_path = Path(args.output_dir) / "episode_series_plan.md"
+        table_path.write_text(f"# Planned Video Series ({len(episodes)} Episodes)\n\n{series_table_md}\n", encoding="utf-8")
+        print(f"💾 Saved Markdown episode table to: {table_path}")
+
+        if args.plan_only:
+            return
 
         discovered = brand_info.get("discovered_assets", {})
         screens = args.screens or discovered.get("screenshots", [])[:3]
         pairs = discovered.get("before_after_pairs", [])
-        before_img = args.before or (pairs[0][0] if pairs else (screens[0] if screens else ""))
-        after_img = args.after or (pairs[0][1] if pairs else (screens[1] if len(screens) > 1 else before_img))
 
-        chosen_format = args.format or brand_info.get("default_format", "screen_walkthrough")
+        chosen_format = (
+            args.format
+            or (example_tmpl_dict.get("format") if example_tmpl_dict else None)
+            or brand_info.get("default_format", "screen_walkthrough")
+        )
         theme_dict = brand_info.get("theme", {})
         app_name = brand_info.get("app_name", "App")
         tagline = brand_info.get("tagline", "")
@@ -367,61 +498,104 @@ def main():
             surface_bg_rgb=theme_dict.get("surface_bg_rgb", [18, 18, 22]),
         )
 
-        out_name = args.output or f"{app_name.lower()}_{plan['name']}.mp4"
+        rendered_outputs: List[str] = []
+        for idx, plan in enumerate(episodes):
+            ep_name = plan["name"]
+            pair_idx = idx % len(pairs) if pairs else 0
+            before_img = args.before or (pairs[pair_idx][0] if pairs else (screens[0] if screens else ""))
+            after_img = args.after or (pairs[pair_idx][1] if pairs else (screens[1] if len(screens) > 1 else before_img))
 
-        config = CampaignConfig(
-            name=plan["name"],
-            output_filename=out_name,
-            format=chosen_format,
-            voice=args.voice or "en_us_001",
-            fps=30,
-            screenshots=screens,
-            before_image=before_img,
-            after_image=after_img,
-            step1_title=plan.get("step1_title", "Step 1 · Discover"),
-            step2_title=plan.get("step2_title", "Step 2 · Match"),
-            step3_title=plan.get("step3_title", "Step 3 · Meet IRL"),
-            brand=brand_cfg,
-            hook=HookConfig(
-                badge_lines=plan["hook_badge"],
-                voiceover_text=plan["hook_vo"],
-            ),
-            reveal=RevealConfig(
-                badge_lines=plan["reveal_badge"],
-                voiceover_text=plan["reveal_vo"],
-            ),
-            breakdown=BreakdownConfig(
-                badge_lines=plan["breakdown_badge"],
-                voiceover_text=plan["breakdown_vo"],
-                sheet_title=plan.get("sheet_title", f"why {app_name.lower()} works"),
-                bullets=[
-                    BreakdownBullet(title=plan["bullet1_title"], description=plan["bullet1_desc"]),
-                    BreakdownBullet(title=plan["bullet2_title"], description=plan["bullet2_desc"]),
-                ],
-                button_text=plan.get("button_text", f"Try {app_name} Free"),
-            ),
-            outro=OutroConfig(
-                app_title=f"{app_name} — {tagline}" if tagline else app_name,
-                subtitle=brand_info.get("description", "")[:65],
-                cta_button_text=f"Try {app_name} Free",
-                bottom_pill_lines=["Free on the App Store", "Link in bio"],
-                voiceover_text=plan["outro_vo"],
-            ),
-        )
+            # Optional AI Before/After pair generation via Gemini Nano Banana 2.1 + Pixel Lock
+            if args.generate_images and plan.get("after_edit_prompt"):
+                from generate_pair import generate_locked_pair
 
-        if args.save_template:
-            config.to_json(args.save_template)
-            print(f"💾 Saved generated campaign template to: {args.save_template}")
+                assets_dir = Path(args.output_dir) / "assets"
+                gen_before = assets_dir / f"{ep_name}_before.jpg"
+                gen_after = assets_dir / f"{ep_name}_after.jpg"
+                zone = args.swap_zone or plan.get("swap_zone", "lower")
+                generate_locked_pair(
+                    before_prompt=plan.get("before_image_prompt"),
+                    input_before=Path(args.before) if args.before else None,
+                    after_edit_prompt=plan["after_edit_prompt"],
+                    swap_zone=zone,
+                    output_before=gen_before,
+                    output_after=gen_after,
+                    gemini_key=args.gemini_key,
+                )
+                before_img = str(gen_before)
+                after_img = str(gen_after)
 
-        out_path = run_pipeline(config, output_dir=args.output_dir)
-        if args.publish or args.dry_run_publish:
-            from distribute import distribute_video
-            distribute_video(
-                Path(out_path),
-                platforms=target_platforms,
-                brand=app_name.lower(),
-                dry_run=args.dry_run_publish,
+            out_name = (
+                args.output
+                if (args.output and len(episodes) == 1)
+                else f"{app_name.lower()}_{ep_name}.mp4"
             )
+
+            config = CampaignConfig(
+                name=ep_name,
+                output_filename=out_name,
+                format=chosen_format,
+                voice=args.voice or "en_us_001",
+                fps=30,
+                screenshots=screens,
+                before_image=before_img,
+                after_image=after_img,
+                step1_title=plan.get("step1_title", "Step 1 · Discover"),
+                step2_title=plan.get("step2_title", "Step 2 · Match"),
+                step3_title=plan.get("step3_title", "Step 3 · Meet IRL"),
+                brand=brand_cfg,
+                hook=HookConfig(
+                    badge_lines=plan["hook_badge"],
+                    voiceover_text=plan["hook_vo"],
+                ),
+                reveal=RevealConfig(
+                    badge_lines=plan["reveal_badge"],
+                    voiceover_text=plan["reveal_vo"],
+                ),
+                breakdown=BreakdownConfig(
+                    badge_lines=plan["breakdown_badge"],
+                    voiceover_text=plan["breakdown_vo"],
+                    sheet_title=plan.get("sheet_title", f"why {app_name.lower()} works"),
+                    bullets=[
+                        BreakdownBullet(title=plan["bullet1_title"], description=plan["bullet1_desc"]),
+                        BreakdownBullet(title=plan["bullet2_title"], description=plan["bullet2_desc"]),
+                    ],
+                    button_text=plan.get("button_text", f"Try {app_name} Free"),
+                ),
+                outro=OutroConfig(
+                    app_title=f"{app_name} — {tagline}" if tagline else app_name,
+                    subtitle=brand_info.get("description", "")[:65],
+                    cta_button_text=f"Try {app_name} Free",
+                    bottom_pill_lines=["Free on the App Store", "Link in bio"],
+                    voiceover_text=plan["outro_vo"],
+                ),
+            )
+
+            tmpl_save_path = (
+                args.save_template
+                if (args.save_template and len(episodes) == 1)
+                else os.path.join(args.output_dir, f"{ep_name}.json")
+            )
+            config.to_json(tmpl_save_path)
+            print(f"💾 Saved campaign template JSON to: {tmpl_save_path}")
+
+            out_path = run_pipeline(config, output_dir=args.output_dir)
+            rendered_outputs.append(out_path)
+            if args.publish or args.dry_run_publish:
+                from distribute import distribute_video
+                distribute_video(
+                    Path(out_path),
+                    platforms=target_platforms,
+                    brand=app_name.lower(),
+                    dry_run=args.dry_run_publish,
+                )
+
+        if len(rendered_outputs) > 1:
+            print("\n" + "=" * 68)
+            print(f"🏆 BATCH SERIES COMPLETE: Rendered {len(rendered_outputs)} videos:")
+            for p in rendered_outputs:
+                print(f"   🎬 {p}")
+            print("=" * 68 + "\n")
         return
 
     parser.print_help()
